@@ -1,0 +1,268 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
+#Data and Web Mining Project
+#Carl Flynn x17347726
+#Cian Larkin x17453136
+
+###Set working directory
+```{r}
+setwd("C:/Users/CarlF/OneDrive/Desktop/Semester 2/Data Mining/Project")
+```
+
+###Install Packages
+```{r}
+library(tidyverse)
+library(reshape)
+library(caret)
+library(gmodels)
+library(dummies)
+library(class)
+
+```
+
+###Loading Data
+```{r}
+HeartFailure <- read.csv("heart_failure_clinical_records_dataset.csv", header = TRUE)
+```
+
+###Creating a sample model
+```{r}
+y <- HeartFailure$DEATH_EVENT
+```
+
+```{r}
+y <- factor(y, levels = c(0,1), labels = c("No", "Yes"))
+table(y)
+```
+
+```{r}
+prop.table(table(y))
+```
+
+**Here we are selecting a random sample of 33% and also setting our seed**
+```{r}
+set.seed(1337)
+index <- sample(1:length(y), length(y) * .33, replace=FALSE)
+testing <- y[index]
+```
+
+```{r}
+HeartModel <- rep("No", length(testing))
+```
+
+```{r}
+HeartModel <- factor(HeartModel, levels = c("No", "Yes"), labels = c("No", "Yes"))
+```
+
+**Here we can see how our Heart Model performed**
+```{r}
+table(testing, HeartModel)
+```
+
+```{r}
+(HeartAccuracy <- 1 - mean(HeartModel != testing))
+```
+
+**Checking the distribution of our sample**
+```{r}
+prop.table(table(testing))
+```
+
+```{r}
+Heart <- c()
+for (i in 1:1000) {
+  index <- sample(1:length(y), length(y) * .25, replace=FALSE)
+  testing <- y[index]
+  HeartModel <- round(runif(length(testing), min=0, max=1))
+  HeartModel <- factor(HeartModel, levels = c(0,1), labels = c("No", "Yes"))
+  Heart[i] <- 1 - mean(HeartModel != testing)
+}
+results <- data.frame(Heart)
+names(results) <- c("Heart Failure Accuracy")
+summary(results)
+```
+**We can see the distribution is fairly normal for the sample**
+```{r}
+ggplot(melt(results), mapping = aes (fill = variable, x = value)) + geom_density (alpha = .5)
+```
+
+#Creating the model for the diabetes data
+```{r}
+Diabetes_Death <- HeartFailure[, c("diabetes", "DEATH_EVENT")]
+Diabetes_Death$DEATH_EVENT <- factor(Diabetes_Death$DEATH_EVENT, levels = c(0,1), labels = c("No", "Yes"))
+```
+
+```{r}
+index <- sample(1:dim(Diabetes_Death)[1], dim(Diabetes_Death)[1] * .66, replace=FALSE)
+trainingDiabetes <- Diabetes_Death[index, ]
+testingDiabetes <- Diabetes_Death[-index, ]
+table(trainingDiabetes$DEATH_EVENT, trainingDiabetes$diabetes)
+```
+
+```{r}
+predictDeath <- function(data) {
+  model <- rep("No", dim(data)[1])
+  model[data$diabetes == '1'] <- "Yes"
+  return(model)
+}
+
+diabetes <- c()
+for (i in 1:1000) {
+  index <- sample(1:dim(Diabetes_Death)[1], dim(Diabetes_Death)[1] * .66, replace=FALSE)
+  testingDiabetes <- Diabetes_Death[-index, ]
+  DiabetesModel <- predictDeath(testingDiabetes)
+  diabetes[i] <- 1 - mean(DiabetesModel != testingDiabetes$DEATH_EVENT)
+}
+results$`Diabetes Accuracy` <- diabetes
+names(results) <- c("HeartFailure", "Diabetes")
+boxplot(results)
+```
+
+#Creating the model for the High Blood Pressure data
+```{r}
+HBP_Death <- HeartFailure[, c("high_blood_pressure", "DEATH_EVENT")]
+HBP_Death$DEATH_EVENT <- factor(HBP_Death$DEATH_EVENT, levels = c(0,1), labels = c("No", "Yes"))
+```
+
+```{r}
+index <- sample(1:dim(HBP_Death)[1], dim(HBP_Death)[1] * .66, replace=FALSE)
+trainingHBP <- HBP_Death[index, ]
+testingHBP <- HBP_Death[-index, ]
+table(trainingHBP$DEATH_EVENT, trainingHBP$high_blood_pressure)
+```
+
+```{r}
+predictDeath <- function(data) {
+  HBPmodel <- rep("No", dim(data)[1])
+  HBPmodel[data$high_blood_pressure == '1'] <- "Yes"
+  return(HBPmodel)
+}
+
+high_blood_pressure <- c()
+for (i in 1:1000) {
+  index <- sample(1:dim(HBP_Death)[1], dim(HBP_Death)[1] * .66, replace=FALSE)
+  testingHBP <- HBP_Death[-index, ]
+  HBPModel <- predictDeath(testingHBP)
+  high_blood_pressure[i] <- 1 - mean(HBPModel != testingHBP$DEATH_EVENT)
+}
+results$`High Blood Pressure Accuracy` <- high_blood_pressure
+names(results) <- c("HeartFailure", "High Blood Pressure","Diabetes")
+boxplot(results)
+```
+
+##Creating the model for the smoking data
+```{r}
+Smoking_Death <- HeartFailure[, c("smoking", "DEATH_EVENT")]
+Smoking_Death$DEATH_EVENT <- factor(Smoking_Death$DEATH_EVENT, levels = c(0,1), labels = c("No", "Yes"))
+```
+
+```{r}
+index <- sample(1:dim(Smoking_Death)[1], dim(Smoking_Death)[1] * .66, replace=FALSE)
+smokingTraining <- Smoking_Death[index, ]
+smokingTesting <- Smoking_Death[-index, ]
+table(smokingTraining$DEATH_EVENT, smokingTraining$smoking)
+```
+
+```{r}
+predictDeath <- function(data) {
+  smokingModel <- rep("No", dim(data)[1])
+  smokingModel[data$smoking == '1'] <- "Yes"
+  return(smokingModel)
+}
+
+smoking <- c()
+for (i in 1:1000) {
+  index <- sample(1:dim(Smoking_Death)[1], dim(Smoking_Death)[1] * .66, replace=FALSE)
+  smokingTesting <- Smoking_Death[-index, ]
+  smokingModel <- predictDeath(smokingTesting)
+  smoking[i] <- 1 - mean(smokingModel != smokingTesting$DEATH_EVENT)
+}
+results$`Smoking Accuracy` <- smoking
+names(results) <- c("HeartFailure","Smoking", "High Blood Pressure","Diabetes")
+boxplot(results)
+```
+
+#Evaluating Performance
+```{r}
+confusionMatrix(factor(DiabetesModel), testingDiabetes$DEATH_EVENT, positive = "Yes")
+confusionMatrix(factor(HBPModel), testingHBP$DEATH_EVENT, positive = "Yes")
+confusionMatrix(factor(smokingModel), smokingTesting$DEATH_EVENT, positive = "Yes")
+```
+
+#KNN
+```{r}
+set.seed(1337)
+```
+
+#Loading Data
+```{r}
+HeartFailure <- read.csv("heart_failure_clinical_records_dataset.csv", header = TRUE)
+```
+
+```{r}
+HeartFailure$DEATH_EVENT <- factor(HeartFailure$DEATH_EVENT, levels = c(0,1), labels = c("No", "Yes"))
+```
+**Normalising the data**
+```{r}
+n <- sapply(HeartFailure, function(x) {is.numeric(x)})
+n
+```
+
+```{r}
+numerics <-HeartFailure[, n]
+summary(numerics)
+```
+
+```{r}
+normalize <- function(x) { return ((x - min(x)) / (max(x) - min(x))) }
+numericsNormal <- normalize(numerics)
+summary(numericsNormal)
+```
+
+```{r}
+HeartFailureKNN <- HeartFailure[, !n]
+HeartFailureKNN <- cbind(HeartFailureKNN, numericsNormal)
+```
+**Loading dummy data**
+```{r}
+tkNN <- dummy.data.frame(HeartFailureKNN)
+summary(tkNN)
+```
+
+```{r}
+Died <- tkNN$HeartFailureKNNYes
+```
+**Splitting our training and test data 66-34**
+```{r}
+index <- createDataPartition(HeartFailure$DEATH_EVENT, p = .66,
+                             list = FALSE,
+                             times = 1)
+kNNTraining <- tkNN[index,-c(1,2)]
+kNNTesting <- tkNN[-index,-c(1,2)]
+
+DiedTrain <- tkNN[index,]$HeartFailureKNNYes
+DiedTest <- tkNN[-index,]$HeartFailureKNNYes
+
+summary(DiedTrain)
+```
+**Setting our k values**
+```{r}
+k1 <- round(sqrt(dim(kNNTraining)[1])) #sqrt of number of instances
+k2 <- round(sqrt(dim(kNNTraining)[2])) #sqrt of number of attributes
+k3 <- 5 #a number between 3 and 10
+```
+
+```{r}
+knn1 <- knn(train = kNNTraining, test = kNNTesting, cl = DiedTrain, k=k1)
+knn2 <- knn(train = kNNTraining, test = kNNTesting, cl = DiedTrain, k=k2)
+knn3 <- knn(train = kNNTraining, test = kNNTesting, cl = DiedTrain, k=k3)
+```
+**Evaluating KNN performance**
+```{r}
+confusionMatrix(knn1, as.factor(DiedTest))
+confusionMatrix(knn2, as.factor(DiedTest))
+confusionMatrix(knn3, as.factor(DiedTest))
+```
